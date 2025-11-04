@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO Object Detection - Mobile</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 100%;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover {
+            background: #eef2ff;
+            border-color: #764ba2;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .camera-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: transform 0.2s ease;
+        }
+        
+        .camera-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .camera-btn:active {
+            transform: translateY(0);
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        .preview-container {
+            position: relative;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        #imagePreview, #canvasOutput {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .results {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .result-item {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .confidence-bar {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .stat-item {
+            flex: 1;
+            padding: 10px;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 1.3rem;
+            }
+            
+            .camera-btn {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 YOLO Object Detection</h1>
+        <p class="subtitle">Upload gambar atau gunakan kamera untuk deteksi objek</p>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="objectCount">0</div>
+                <div class="stat-label">Objek Terdeteksi</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="confidenceAvg">0%</div>
+                <div class="stat-label">Rata-rata Akurasi</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="processingTime">0ms</div>
+                <div class="stat-label">Waktu Proses</div>
+            </div>
+        </div>
+        
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon">📁</div>
+            <h3>Upload Gambar</h3>
+            <p>Klik untuk memilih file atau drop gambar di sini</p>
+            <p style="font-size: 0.8rem; color: #888; margin-top: 10px;">Format: JPG, PNG, WebP (Max 5MB)</p>
+        </div>
+        
+        <input type="file" id="fileInput" accept="image/*">
+        
+        <div style="text-align: center;">
+            <button class="camera-btn" onclick="openCamera()">📷 Buka Kamera</button>
+            <button class="camera-btn" onclick="takePicture()" style="background: linear-gradient(135deg, #FF6B6B, #FF8E53);">📸 Ambil Foto</button>
+        </div>
+        
+        <div class="preview-container">
+            <img id="imagePreview" style="display: none;">
+            <canvas id="canvasOutput"></canvas>
+            <video id="video" autoplay playsinline style="display: none; max-width: 100%; border-radius: 10px;"></video>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Memproses deteksi objek...</p>
+        </div>
+        
+        <div class="results" id="results">
+            <h3>Hasil Deteksi:</h3>
+            <div id="resultList"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2"></script>
+    
+    <script src="script.js"></script>
+</body>
+</html>
